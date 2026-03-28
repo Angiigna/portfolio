@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sivangi Sankar — Forest Tech World</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --deep-forest: #253D2C;
+    --primary-green: #2E6F40;
+    --accent-green: #68BA7F;
+    --soft-mint: #CFFFDC;
+    --dark-overlay: rgba(15,28,18,0.85);
+    --panel-bg: rgba(46,111,64,0.15);
+    --panel-border: rgba(104,186,127,0.3);
+    --glow: rgba(104,186,127,0.6);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--deep-forest);
+    color: var(--soft-mint);
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+  }
+
+  /* ─── CANVAS BACKGROUND ─── */
+  #bg-canvas {
+    position: fixed; inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ─── AMBIENT GRADIENT OVERLAY ─── */
+  .ambient {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at 20% 50%, rgba(37,61,44,0.6) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(46,111,64,0.3) 0%, transparent 50%);
+    z-index: 1;
+    pointer-events: none;
+    animation: ambientShift 12s ease-in-out infinite alternate;
+  }
+  @keyframes ambientShift {
+    0%  { opacity: 0.8; }
+    100%{ opacity: 1;   }
+  }
+
+  /* ─── MAIN LAYOUT ─── */
+  #app {
+    position: relative; z-index: 2;
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ─── HUD FRAME ─── */
+  .hud {
+    width: min(960px, 96vw);
+    height: min(620px, 96vh);
+    position: relative;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: 1fr;
+    gap: 16px;
+  }
+
+  /* Corner decorations */
+  .hud::before, .hud::after {
+    content: '';
+    position: absolute;
+    width: 28px; height: 28px;
+    border-color: var(--accent-green);
+    border-style: solid;
+    z-index: 10;
+  }
+  .hud::before { top: 0; left: 0; border-width: 2px 0 0 2px; }
+  .hud::after  { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+  .hud-corner-tr, .hud-corner-bl {
+    position: absolute;
+    width: 28px; height: 28px;
+    border-color: var(--accent-green);
+    border-style: solid;
+    z-index: 10;
+  }
+  .hud-corner-tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+  .hud-corner-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+
+  /* ─── LEFT: CHARACTER CARD ─── */
+  .char-panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(12px);
+    padding: 28px 20px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .char-panel::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(104,186,127,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .char-avatar {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-green);
+    background: linear-gradient(135deg, #2E6F40 0%, #1a3d25 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px;
+    position: relative;
+    box-shadow: 0 0 20px rgba(104,186,127,0.4), inset 0 0 20px rgba(0,0,0,0.3);
+    animation: avatarPulse 4s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes avatarPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(104,186,127,0.4), inset 0 0 20px rgba(0,0,0,0.3); }
+    50%       { box-shadow: 0 0 40px rgba(104,186,127,0.7), inset 0 0 20px rgba(0,0,0,0.3); }
+  }
+
+  .char-class-badge {
+    position: absolute; bottom: -6px;
+    background: var(--primary-green);
+    border: 1px solid var(--accent-green);
+    color: var(--soft-mint);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    padding: 2px 8px;
+    letter-spacing: 1.5px;
+  }
+
+  .char-info { text-align: center; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 14px; }
+
+  .char-name {
+    font-family: 'Cinzel', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--soft-mint);
+    letter-spacing: 1px;
+    text-shadow: 0 0 12px rgba(104,186,127,0.5);
+  }
+
+  .char-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent-green);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .char-tagline {
+    font-size: 0.78rem;
+    color: rgba(207,255,220,0.65);
+    font-style: italic;
+    font-weight: 300;
+    line-height: 1.5;
+    padding: 0 4px;
+    margin-top: 4px;
+  }
+
+  .xp-section { width: 100%; margin-top: 8px; }
+  .xp-label {
+    display: flex; justify-content: space-between;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--accent-green);
+    margin-bottom: 4px;
+  }
+  .xp-bar {
+    height: 6px;
+    background: rgba(104,186,127,0.15);
+    border: 1px solid rgba(104,186,127,0.3);
+    position: relative; overflow: hidden;
+  }
+  .xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-green), var(--accent-green));
+    animation: xpGrow 2s ease-out forwards;
+  }
+  @keyframes xpGrow { from { width: 0; } }
+
+  /* ─── NAV MENU ─── */
+  .nav-menu { width: 100%; margin-top: 8px; display: flex; flex-direction: column; gap: 7px; }
+
+  .nav-btn {
+    background: rgba(46,111,64,0.2);
+    border: 1px solid rgba(104,186,127,0.25);
+    color: var(--soft-mint);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex; align-items: center; gap: 10px;
+    position: relative; overflow: hidden;
+    text-align: left;
+  }
+  .nav-btn::before {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(104,186,127,0.15), transparent);
+    transition: left 0.4s ease;
+  }
+  .nav-btn:hover::before { left: 100%; }
+  .nav-btn:hover {
+    background: rgba(104,186,127,0.2);
+    border-color: var(--accent-green);
+    box-shadow: 0 0 14px rgba(104,186,127,0.3), inset 0 0 8px rgba(104,186,127,0.05);
+    color: #fff;
+    transform: translateX(3px);
+  }
+  .nav-btn.active {
+    background: rgba(104,186,127,0.25);
+    border-color: var(--accent-green);
+    box-shadow: 0 0 18px rgba(104,186,127,0.4);
+    color: #fff;
+  }
+  .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+  /* ─── RIGHT: CONTENT PANEL ─── */
+  .content-panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 16px 24px 12px;
+    border-bottom: 1px solid var(--panel-border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--accent-green);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .panel-icon { font-size: 1.1rem; }
+
+  .panel-body {
+    padding: 20px 24px;
+    height: calc(100% - 57px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-green) transparent;
+  }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--primary-green); border-radius: 2px; }
+
+  /* VIEW TRANSITIONS */
+  .view { display: none; animation: fadeSlideIn 0.35s ease; }
+  .view.active { display: block; }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateX(12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ─── HOME VIEW ─── */
+  .home-view {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    height: 100%; text-align: center; gap: 16px;
+  }
+  .home-view.active { display: flex; }
+  .home-greeting {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent-green);
+    letter-spacing: 3px;
+    animation: blink 1.5s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .home-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--soft-mint);
+    text-shadow: 0 0 20px rgba(104,186,127,0.4);
+  }
+  .home-sub {
+    color: rgba(207,255,220,0.6);
+    font-size: 0.85rem;
+    max-width: 340px;
+    line-height: 1.7;
+  }
+  .home-prompt {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    color: rgba(104,186,127,0.7);
+    margin-top: 8px;
+    letter-spacing: 1px;
+  }
+
+  /* ─── PROFILE VIEW ─── */
+  .lore-block {
+    background: rgba(37,61,44,0.5);
+    border-left: 2px solid var(--accent-green);
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: rgba(207,255,220,0.85);
+  }
+  .lore-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--accent-green);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid rgba(104,186,127,0.1);
+    font-size: 0.85rem;
+  }
+  .stat-key { color: rgba(207,255,220,0.6); font-weight: 500; }
+  .stat-val { color: var(--soft-mint); font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; }
+  .stat-highlight { color: var(--accent-green); font-weight: 700; }
+
+  .course-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .course-tag {
+    background: rgba(46,111,64,0.3);
+    border: 1px solid rgba(104,186,127,0.3);
+    font-size: 0.7rem;
+    padding: 3px 10px;
+    color: var(--accent-green);
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  /* ─── SKILLS VIEW ─── */
+  .skill-category { margin-bottom: 20px; }
+  .skill-cat-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    color: var(--accent-green);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .skill-cat-title::after {
+    content: ''; flex: 1;
+    height: 1px; background: rgba(104,186,127,0.2);
+  }
+  .skill-row { margin-bottom: 10px; }
+  .skill-top {
+    display: flex; justify-content: space-between;
+    font-size: 0.82rem; font-weight: 600;
+    margin-bottom: 5px;
+    color: rgba(207,255,220,0.9);
+  }
+  .skill-pct { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--accent-green); }
+  .skill-track {
+    height: 8px;
+    background: rgba(104,186,127,0.1);
+    border: 1px solid rgba(104,186,127,0.2);
+    position: relative; overflow: hidden;
+  }
+  .skill-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-green) 0%, var(--accent-green) 100%);
+    position: relative;
+    transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+    width: 0;
+  }
+  .skill-fill::after {
+    content: '';
+    position: absolute; right: 0; top: 0; bottom: 0;
+    width: 6px;
+    background: rgba(255,255,255,0.4);
+    filter: blur(2px);
+  }
+
+  /* ─── QUESTS VIEW ─── */
+  .quest-card {
+    background: rgba(37,61,44,0.4);
+    border: 1px solid rgba(104,186,127,0.2);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+  }
+  .quest-card:hover {
+    border-color: var(--accent-green);
+    background: rgba(104,186,127,0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(104,186,127,0.2);
+  }
+  .quest-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .quest-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--soft-mint);
+  }
+  .quest-status {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    padding: 3px 8px;
+    border: 1px solid;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .status-complete { color: var(--accent-green); border-color: var(--accent-green); background: rgba(104,186,127,0.1); }
+  .status-prototype { color: #f0b45a; border-color: #f0b45a; background: rgba(240,180,90,0.1); }
+
+  .quest-tech {
+    margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .tech-pill {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    color: rgba(104,186,127,0.8);
+    background: rgba(46,111,64,0.3);
+    padding: 2px 7px;
+    letter-spacing: 0.5px;
+  }
+  .quest-desc {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: rgba(207,255,220,0.65);
+    line-height: 1.6;
+    display: none;
+  }
+  .quest-card.open .quest-desc { display: block; }
+  .quest-link {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent-green);
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(104,186,127,0.4);
+    padding-bottom: 1px;
+    transition: color 0.2s;
+  }
+  .quest-link:hover { color: var(--soft-mint); }
+  .quest-expand {
+    position: absolute; bottom: 10px; right: 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    color: rgba(104,186,127,0.5);
+  }
+
+  /* ─── ACHIEVEMENTS VIEW ─── */
+  .badge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .badge-card {
+    background: rgba(37,61,44,0.4);
+    border: 1px solid rgba(104,186,127,0.2);
+    padding: 12px;
+    display: flex; align-items: flex-start; gap: 10px;
+    transition: all 0.25s;
+  }
+  .badge-card:hover {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 12px rgba(104,186,127,0.2);
+  }
+  .badge-icon {
+    font-size: 1.4rem; width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(46,111,64,0.4);
+    border: 1px solid rgba(104,186,127,0.3);
+    flex-shrink: 0;
+  }
+  .badge-info {}
+  .badge-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.82rem; font-weight: 700;
+    color: var(--soft-mint);
+    line-height: 1.3;
+  }
+  .badge-source {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--accent-green);
+    margin-top: 3px;
+    letter-spacing: 0.5px;
+  }
+
+  .achieve-section-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem; color: var(--accent-green);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin: 16px 0 10px;
+  }
+  .achieve-section-title:first-child { margin-top: 0; }
+
+  /* ─── CONTACT VIEW ─── */
+  .terminal-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 14px;
+  }
+  .term-dots { display: flex; gap: 5px; }
+  .term-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: rgba(104,186,127,0.3);
+    border: 1px solid rgba(104,186,127,0.5);
+  }
+  .term-dot:first-child { background: rgba(240,100,100,0.5); }
+  .term-dot:nth-child(2) { background: rgba(240,200,90,0.5); }
+  .term-dot:nth-child(3) { background: rgba(104,186,127,0.5); }
+  .term-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem; color: rgba(104,186,127,0.6);
+    letter-spacing: 1px;
+  }
+
+  .terminal-body {
+    background: rgba(15,28,18,0.7);
+    border: 1px solid rgba(104,186,127,0.2);
+    padding: 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 2;
+  }
+  .term-line { display: flex; gap: 8px; align-items: center; }
+  .term-prompt { color: var(--accent-green); }
+  .term-cmd { color: rgba(207,255,220,0.9); }
+  .term-output { color: rgba(207,255,220,0.65); margin-left: 20px; }
+  .term-link {
+    color: var(--accent-green);
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(104,186,127,0.4);
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .term-link:hover { color: var(--soft-mint); border-color: var(--soft-mint); }
+
+  .contact-social {
+    display: flex; gap: 10px; margin-top: 16px;
+  }
+  .social-btn {
+    flex: 1;
+    background: rgba(46,111,64,0.2);
+    border: 1px solid rgba(104,186,127,0.3);
+    color: var(--soft-mint);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    padding: 11px;
+    text-align: center;
+    text-decoration: none;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all 0.25s;
+    cursor: pointer;
+  }
+  .social-btn:hover {
+    background: rgba(104,186,127,0.2);
+    border-color: var(--accent-green);
+    box-shadow: 0 0 14px rgba(104,186,127,0.3);
+    color: #fff;
+  }
+
+  /* ─── MOBILE ─── */
+  @media (max-width: 640px) {
+    html, body { overflow: hidden; overflow-y: auto; }
+    #app { align-items: flex-start; padding: 12px 0; height: auto; min-height: 100vh; }
+    .hud {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+      width: 96vw; height: auto;
+      min-height: unset;
+      gap: 10px;
+    }
+    .char-panel {
+      flex-direction: row; flex-wrap: wrap;
+      padding: 16px; align-items: center; gap: 12px;
+    }
+    .char-avatar { width: 70px; height: 70px; font-size: 30px; }
+    .char-info { text-align: left; align-items: flex-start; padding-top: 0; flex: 1; }
+    .xp-section { width: 100%; }
+    .nav-menu { flex-direction: row; flex-wrap: wrap; }
+    .nav-btn { flex: 1; min-width: 100px; justify-content: center; padding: 8px 6px; font-size: 0.75rem; }
+    .content-panel { height: 60vh; }
+    .badge-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ─── SCAN LINE EFFECT ─── */
+  .scanlines {
+    position: fixed; inset: 0; z-index: 3;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+  }
+
+  /* status bar bottom */
+  .status-bar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(46,111,64,0.3);
+    border-top: 1px solid rgba(104,186,127,0.2);
+    padding: 4px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.58rem;
+    color: rgba(104,186,127,0.5);
+    letter-spacing: 1px;
+  }
+  .status-pulse {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-green);
+    display: inline-block; margin-right: 5px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="ambient"></div>
+<div class="scanlines"></div>
+
+<div id="app">
+  <div class="hud">
+    <div class="hud-corner-tr"></div>
+    <div class="hud-corner-bl"></div>
+
+    <!-- LEFT: CHARACTER CARD -->
+    <div class="char-panel">
+      <div class="char-avatar" style="padding:0; overflow:hidden;">
+  <img src="dp.jpeg"
+       style="width:100%; height:100%; object-fit:cover; object-position: center top; border-radius:50%;" />
+</div>
+
+      <div class="char-info">
+        <div class="char-name">Sivangi Sankar</div>
+        <div class="char-title">// Builder | Developer | Learner</div>
+        <div class="char-tagline">"Where the roots of logic meet the light of imagination"</div>
+
+        <div class="xp-section" style="margin-top:12px;">
+          <div class="xp-label">
+            <span>⭐ CGPA</span>
+            <span>9.17 / 10</span>
+          </div>
+          <div class="xp-bar">
+            <div class="xp-fill" style="width:91.7%; animation-duration:2.5s;"></div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-btn" onclick="showView('home')" data-view="home">
+          <span class="nav-icon">🏠</span> Hub
+        </button>
+        <button class="nav-btn" onclick="showView('profile')" data-view="profile">
+          <span class="nav-icon">🧾</span> Profile
+        </button>
+        <button class="nav-btn" onclick="showView('skills')" data-view="skills">
+          <span class="nav-icon">⚔️</span> Stats
+        </button>
+        <button class="nav-btn" onclick="showView('quests')" data-view="quests">
+          <span class="nav-icon">📜</span> Quests
+        </button>
+        <button class="nav-btn" onclick="showView('achievements')" data-view="achievements">
+          <span class="nav-icon">🏆</span> Badges
+        </button>
+        <button class="nav-btn" onclick="showView('contact')" data-view="contact">
+          <span class="nav-icon">📡</span> Signal
+        </button>
+      </nav>
+    </div>
+
+    <!-- RIGHT: CONTENT -->
+    <div class="content-panel">
+
+      <!-- HOME -->
+      <div id="view-home" class="view home-view active">
+        <div class="home-greeting">▶ SYSTEM READY — SELECT MENU ITEM</div>
+        <div class="home-title">Welcome to the Forest</div>
+        <div class="home-sub">
+          You have entered Sivangi's digital world — a calm ecosystem where code grows like roots and ideas bloom like forest light.
+        </div>
+        <div class="home-prompt">← Use the menu to explore her world</div>
+        <div style="margin-top:16px; font-family:'Share Tech Mono',monospace; font-size:0.62rem; color:rgba(104,186,127,0.35); letter-spacing:1px;">
+          MCA · Pondicherry University · Class of 2027
+        </div>
+      </div>
+
+      <!-- PROFILE -->
+      <div id="view-profile" class="view" style="display:none;">
+        <div class="panel-header">
+          <span class="panel-icon">🧾</span>
+          <span class="panel-title">Character Lore</span>
+        </div>
+        <div class="panel-body">
+          <div class="lore-block">
+            <div class="lore-label">// origin</div>
+            Hailing from Payyannur, Kerala — a young developer who speaks the language of machines and the poetry of nature with equal fluency.
+          </div>
+
+          <div class="stat-row">
+            <span class="stat-key">Institution</span>
+            <span class="stat-val">Pondicherry University</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-key">Degree (BSc)</span>
+            <span class="stat-val">Computer Science · 2025</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-key">Degree (MCA)</span>
+            <span class="stat-val">Expected May 2027</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-key">CGPA</span>
+            <span class="stat-val stat-highlight">9.17 ★</span>
+          </div>
+
+          <br>
+          <div class="lore-label">// known disciplines</div>
+          <div class="course-tags">
+            <span class="course-tag">DSA</span>
+            <span class="course-tag">OOP</span>
+            <span class="course-tag">DBMS</span>
+            <span class="course-tag">Web Dev</span>
+            <span class="course-tag">Statistics</span>
+            <span class="course-tag">Mathematics</span>
+            <span class="course-tag">Networks</span>
+          </div>
+
+          <br>
+          <div class="lore-block">
+            <div class="lore-label">// character traits</div>
+            Effective communicator · Public speaker · Collaborative builder · Problem solver — equally comfortable in team sprints and solo late-night debugging sessions.
+          </div>
+
+          <div class="lore-label">// languages</div>
+          <div class="stat-row">
+            <span class="stat-key">English</span>
+            <span class="stat-val">Proficient</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-key">Malayalam</span>
+            <span class="stat-val">Native</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SKILLS -->
+      <div id="view-skills" class="view" style="display:none;">
+        <div class="panel-header">
+          <span class="panel-icon">⚔️</span>
+          <span class="panel-title">Stat Sheet</span>
+        </div>
+        <div class="panel-body" id="skills-body">
+          <div class="skill-category">
+            <div class="skill-cat-title">// languages</div>
+            <div class="skill-row">
+              <div class="skill-top"><span>Python</span><span class="skill-pct">90%</span></div>
+              <div class="skill-track"><div class="skill-fill" data-w="90"></div></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-top"><span>C / C++</span><span class="skill-pct">82%</span></div>
+              <div class="skill-track"><div class="skill-fill" data-w="82"></div></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-top"><span>Java</span><span class="skill-pct">75%</span></div>
+              <div class="skill-track"><div class="skill-fill" data-w="75"></div></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-top"><span>SQL</span><span class="skill-pct">85%</span></div>
+              <div class="skill-track"><div class="skill-fill" data-w="85"></div></div>
+            </div>
+          </div>
+
+          <div class="skill-category">
+            <div class="skill-cat-title">// web & backend</div>
+            <div class="skill-row">
+              <div class="skill-top"><span>HTML / CSS / JS</span><span class="skill-pct">88%</span></div>
+              <div class="skill-track"><div class="skill-fill" data-w="88"></div></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-top"><span>Node.js + Express</span><span class="skill-pct">72%</span></div>
+              <div class="skill-track"><div class="skill-fill" data-w="72"></div></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-top"><span>Python Flask</span><span class="skill-pct">76%</span></div>
+              <div class="skill-track"><div class="skill-fill" data-w="76"></div></div>
+            </div>
+          </div>
+
+          <div class="skill-category">
+            <div class="skill-cat-title">// tools & data</div>
+            <div class="skill-row">
+              <div class="skill-top"><span>Git</span><span class="skill-pct">80%</span></div>
+              <div class="skill-track"><div class="skill-fill" data-w="80"></div></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-top"><span>Tableau</span><span class="skill-pct">65%</span></div>
+              <div class="skill-track"><div class="skill-fill" data-w="65"></div></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-top"><span>Excel</span><span class="skill-pct">70%</span></div>
+              <div class="skill-track"><div class="skill-fill" data-w="70"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUESTS -->
+      <div id="view-quests" class="view" style="display:none;">
+        <div class="panel-header">
+          <span class="panel-icon">📜</span>
+          <span class="panel-title">Quest Log</span>
+        </div>
+        <div class="panel-body">
+
+          <div class="quest-card" onclick="toggleQuest(this)">
+            <div class="quest-header">
+              <div class="quest-name">🗺️ Green Mapping of Pondicherry University</div>
+              <span class="quest-status status-complete">COMPLETE</span>
+            </div>
+            <div class="quest-tech">
+              <span class="tech-pill">HTML</span><span class="tech-pill">CSS</span>
+              <span class="tech-pill">JavaScript</span><span class="tech-pill">Leaflet.js</span>
+            </div>
+            <div class="quest-desc">
+              An interactive green mapping initiative of Pondicherry University campus. Designed the full UI and integrated maps via Leaflet.js. Managed stakeholders — faculty to end-users — gathering feedback through each phase to refine features. Flora and fauna were catalogued in dedicated phases across a semester.
+              <br>
+              <a href="https://angiigna.github.io/EVNS/newversion/new.html" target="_blank" class="quest-link">⬡ View Live Project</a>
+            </div>
+            <span class="quest-expand">▼ expand</span>
+          </div>
+
+          <div class="quest-card" onclick="toggleQuest(this)">
+            <div class="quest-header">
+              <div class="quest-name">🌙 Period Tracker Web App</div>
+              <span class="quest-status status-prototype">PROTOTYPE</span>
+            </div>
+            <div class="quest-tech">
+              <span class="tech-pill">Node.js</span><span class="tech-pill">Express</span>
+              <span class="tech-pill">SQL</span><span class="tech-pill">HTML/CSS/JS</span>
+            </div>
+            <div class="quest-desc">
+              Full-stack menstrual cycle tracker with predictive logic derived from SQL analysis of historical cycle data. The UI draws from lunar and tidal aesthetics — calm, natural, and personal. Includes secure authentication and personalized cycle predictions.
+              <br>
+              <a href="https://github.com/Angiigna/Period-Tracker" target="_blank" class="quest-link">⬡ View on GitHub</a>
+            </div>
+            <span class="quest-expand">▼ expand</span>
+          </div>
+
+          <div class="quest-card" onclick="toggleQuest(this)">
+            <div class="quest-header">
+              <div class="quest-name">🩸 Blood Bank Management System</div>
+              <span class="quest-status status-complete">COMPLETE</span>
+            </div>
+            <div class="quest-tech">
+              <span class="tech-pill">Python Flask</span><span class="tech-pill">SQL</span>
+              <span class="tech-pill">HTML</span><span class="tech-pill">Jinja</span>
+            </div>
+            <div class="quest-desc">
+              End-to-end blood bank management platform enabling users to find donors and submit blood requests. Donors can contact requesters; requesters can contact donors. Built with full ownership across design, backend, and deployment.
+              <br>
+              <a href="https://github.com/Angiigna/BloodBank" target="_blank" class="quest-link">⬡ View on GitHub</a>
+            </div>
+            <span class="quest-expand">▼ expand</span>
+          </div>
+
+          <div class="quest-card" onclick="toggleQuest(this)">
+            <div class="quest-header">
+              <div class="quest-name">⌨️ Terminal Systems Collection</div>
+              <span class="quest-status status-complete">COMPLETE</span>
+            </div>
+            <div class="quest-tech">
+              <span class="tech-pill">C++</span><span class="tech-pill">Java</span><span class="tech-pill">Python</span>
+            </div>
+            <div class="quest-desc">
+              A collection of CLI-based systems: restaurant manager, bank system, ID card generator. Implemented algorithms including Dijkstra, Kruskal, Knapsack (DP & greedy), and Merge Sort. Python Mini-Labs repository covers sorting, searching, and data structures — arrays, queues, linked lists, graphs, and trees.
+              <br>
+              <a href="https://github.com/Angiigna/Python-Mini-Labs" target="_blank" class="quest-link">⬡ Python Mini-Labs on GitHub</a>
+            </div>
+            <span class="quest-expand">▼ expand</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ACHIEVEMENTS -->
+      <div id="view-achievements" class="view" style="display:none;">
+        <div class="panel-header">
+          <span class="panel-icon">🏆</span>
+          <span class="panel-title">Badge Collection</span>
+        </div>
+        <div class="panel-body">
+
+          <div class="achieve-section-title">// certifications</div>
+          <div class="badge-grid">
+            <div class="badge-card">
+              <div class="badge-icon">🐍</div>
+              <div class="badge-info">
+                <div class="badge-name">Python 101 for Data Science</div>
+                <div class="badge-source">IBM · Certified</div>
+              </div>
+            </div>
+            <div class="badge-card">
+              <div class="badge-icon">🛡️</div>
+              <div class="badge-info">
+                <div class="badge-name">Foundations of Cyber Security</div>
+                <div class="badge-source">Google · Certified</div>
+              </div>
+            </div>
+            <div class="badge-card">
+              <div class="badge-icon">🔐</div>
+              <div class="badge-info">
+                <div class="badge-name">Play it Safe: Manage Security Risks</div>
+                <div class="badge-source">Google · Certified</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="achieve-section-title">// victories</div>
+          <div class="badge-grid">
+            <div class="badge-card">
+              <div class="badge-icon">🥇</div>
+              <div class="badge-info">
+                <div class="badge-name">Mathematics Debate — Winner</div>
+                <div class="badge-source">Pondicherry University</div>
+              </div>
+            </div>
+            <div class="badge-card">
+              <div class="badge-icon">📖</div>
+              <div class="badge-info">
+                <div class="badge-name">Folklore Storytelling — Winner</div>
+                <div class="badge-source">Pondicherry University</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="achieve-section-title">// workshops & events</div>
+          <div class="badge-grid">
+            <div class="badge-card">
+              <div class="badge-icon">⚛️</div>
+              <div class="badge-info">
+                <div class="badge-name">Essentials of CS: Basics to Quantum</div>
+                <div class="badge-source">6-Day Program · Attendee</div>
+              </div>
+            </div>
+            <div class="badge-card">
+              <div class="badge-icon">🚀</div>
+              <div class="badge-info">
+                <div class="badge-name">Version 26</div>
+                <div class="badge-source">NIT Trichy</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- CONTACT -->
+      <div id="view-contact" class="view" style="display:none;">
+        <div class="panel-header">
+          <span class="panel-icon">📡</span>
+          <span class="panel-title">Signal Transmit</span>
+        </div>
+        <div class="panel-body">
+          <div class="terminal-header">
+            <div class="term-dots">
+              <div class="term-dot"></div>
+              <div class="term-dot"></div>
+              <div class="term-dot"></div>
+            </div>
+            <div class="term-title">Sivangi Sankar ~ contact</div>
+          </div>
+
+          <div class="terminal-body">
+            <div class="term-line">
+              <span class="term-prompt">$</span>
+              <span class="term-cmd">get contact --all</span>
+            </div>
+            <div class="term-line">
+              <span class="term-output">📧 email → <a href="mailto:sivangisankar19@gmail.com" class="term-link">sivangisankar19@gmail.com</a></span>
+            </div>
+            <div class="term-line">
+              <span class="term-output">📍 location → Payyannur, Kerala, India</span>
+            </div>
+            <div class="term-line">
+              <span class="term-output">📞 contact → 6282888528</span>
+            </div>
+            <br>
+            <div class="term-line">
+              <span class="term-prompt">$</span>
+              <span class="term-cmd">ping --github --linkedin</span>
+            </div>
+            <div class="term-line">
+              <span class="term-output">✅ GitHub → <a href="https://github.com/Angiigna" target="_blank" class="term-link">github.com/Angiigna</a></span>
+            </div>
+            <div class="term-line">
+              <span class="term-output">✅ LinkedIn → <a href="https://www.linkedin.com/in/sivangi-19-sankar/" target="_blank" class="term-link">sivangi-19-sankar</a></span>
+            </div>
+            <br>
+            <div class="term-line">
+              <span class="term-prompt">$</span>
+              <span class="term-cmd" id="typed-cmd"></span>
+              <span style="animation:blink 1s step-end infinite; color:var(--accent-green);">█</span>
+            </div>
+          </div>
+
+          <div class="contact-social">
+            <a href="https://github.com/Angiigna" target="_blank" class="social-btn">
+              <span>⬡</span> GitHub
+            </a>
+            <a href="https://www.linkedin.com/in/sivangi-19-sankar/" target="_blank" class="social-btn">
+              <span>◈</span> LinkedIn
+            </a>
+            <a href="mailto:sivangisankar19@gmail.com" class="social-btn">
+              <span>◉</span> Email
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATUS BAR (inside content panel) -->
+      <div class="status-bar">
+        <span><span class="status-pulse"></span>SYSTEM ONLINE</span>
+        <span id="status-location">▷ HUB</span>
+        <span>MCA · PONDICHERRY UNIVERSITY</span>
+      </div>
+
+    </div><!-- /content-panel -->
+  </div><!-- /hud -->
+</div><!-- /app -->
+
+<script>
+// ─── PARTICLE BACKGROUND ───
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.size = Math.random() * 2 + 0.5;
+    this.speedY = -(Math.random() * 0.4 + 0.1);
+    this.speedX = (Math.random() - 0.5) * 0.2;
+    this.opacity = Math.random() * 0.5 + 0.1;
+    this.life = 0;
+    this.maxLife = Math.random() * 200 + 100;
+  }
+  update() {
+    this.x += this.speedX;
+    this.y += this.speedY;
+    this.life++;
+    if (this.life > this.maxLife || this.y < 0) this.reset();
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(104,186,127,${this.opacity * (1 - this.life/this.maxLife)})`;
+    ctx.fill();
+  }
+}
+
+for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+function animate() {
+  ctx.clearRect(0, 0, W, H);
+  particles.forEach(p => { p.update(); p.draw(); });
+  requestAnimationFrame(animate);
+}
+animate();
+
+// ─── VIEW SWITCHING ───
+const labels = {
+  home: 'HUB', profile: 'PROFILE',
+  skills: 'STATS', quests: 'QUEST LOG',
+  achievements: 'BADGES', contact: 'SIGNAL'
+};
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => {
+    v.classList.remove('active');
+    v.style.display = 'none';
+  });
+  const el = document.getElementById('view-' + id);
+  if (el) { el.style.display = ''; requestAnimationFrame(() => el.classList.add('active')); }
+
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`[data-view="${id}"]`);
+  if (btn) btn.classList.add('active');
+
+  document.getElementById('status-location').textContent = '▷ ' + (labels[id] || id.toUpperCase());
+
+  if (id === 'skills') animateSkills();
+}
+
+// ─── SKILL BAR ANIMATION ───
+function animateSkills() {
+  setTimeout(() => {
+    document.querySelectorAll('.skill-fill').forEach(bar => {
+      bar.style.width = bar.dataset.w + '%';
+    });
+  }, 100);
+}
+
+// ─── QUEST EXPAND ───
+function toggleQuest(card) {
+  const isOpen = card.classList.contains('open');
+  document.querySelectorAll('.quest-card').forEach(c => {
+    c.classList.remove('open');
+    const btn = c.querySelector('.quest-expand');
+    if (btn) btn.textContent = '▼ expand';
+  });
+  if (!isOpen) {
+    card.classList.add('open');
+    const btn = card.querySelector('.quest-expand');
+    if (btn) btn.textContent = '▲ collapse';
+  }
+}
+
+// ─── TYPED EFFECT IN TERMINAL ───
+function typeCmd(el, text, speed=70) {
+  let i = 0;
+  el.textContent = '';
+  const iv = setInterval(() => {
+    el.textContent += text[i++];
+    if (i >= text.length) clearInterval(iv);
+  }, speed);
+}
+
+// Trigger typing when contact opens
+const observer = new MutationObserver(() => {
+  const contact = document.getElementById('view-contact');
+  if (contact && contact.classList.contains('active')) {
+    setTimeout(() => typeCmd(document.getElementById('typed-cmd'), 'open --channel sivangi'), 400);
+  }
+});
+document.querySelectorAll('.view').forEach(v => observer.observe(v, { attributes: true, attributeFilter: ['class'] }));
+
+// ─── INIT ───
+showView('home');
+document.querySelector('[data-view="home"]').classList.add('active');
+</script>
+</body>
+</html>
